@@ -1,0 +1,40 @@
+---
+import Base from '../layouts/Base.astro';
+import { contactEmail, social } from '../data/site.js';
+---
+<Base banner title="Contact" description="Neem contact op met The Holy 7 voor een concert of een vraag.">
+  <section class="page-hero" style="background-image:url(/images/hero-gentse-feesten-2024.jpg);background-position:50% 46%">
+    <h1>Contacteer ons</h1>
+  </section>
+
+  <section class="page narrow">
+    <form class="mailform" id="mailform" data-to={contactEmail}>
+      <div class="row">
+        <label>Voornaam<input name="voornaam" autocomplete="given-name" required></label>
+        <label>Naam<input name="naam" autocomplete="family-name" required></label>
+      </div>
+      <div class="row">
+        <label>E-mail<input name="email" type="email" autocomplete="email" required></label>
+        <label>Onderwerp<input name="onderwerp"></label>
+      </div>
+      <label>Schrijf hier je bericht<textarea name="bericht" rows="6" required></textarea></label>
+      <button class="btn solid" type="submit">Verzend</button>
+      <p class="form-note">De knop opent je e-mailprogramma met je bericht klaar om te versturen.</p>
+      {!contactEmail && <p class="form-note warn">Het e-mailadres van de band wordt binnenkort toegevoegd.</p>}
+    </form>
+    <p class="sec-more">Of volg ons op <a href={social.facebook} target="_blank" rel="noopener">Facebook</a> en <a href={social.instagram} target="_blank" rel="noopener">Instagram</a>.</p>
+  </section>
+</Base>
+
+<script>
+  const form = document.getElementById('mailform');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const to = form.dataset.to;
+    if (!to) return;
+    const f = new FormData(form);
+    const subject = f.get('onderwerp') || 'via website';
+    const body = `${f.get('bericht')}\n\n${f.get('voornaam')} ${f.get('naam')}\n${f.get('email')}`;
+    location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  });
+</script>

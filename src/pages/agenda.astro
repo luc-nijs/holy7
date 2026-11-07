@@ -1,0 +1,41 @@
+---
+import Base from '../layouts/Base.astro';
+import { fetchSheet } from '../lib/sheet.js';
+import { SHEET_CSV_URL, recordsFromCSV, split, upcomingHtml, pastHtml } from '../lib/agenda.js';
+import snapshot from '../data/agenda-snapshot.json';
+
+let records = snapshot;
+try { records = recordsFromCSV(await fetchSheet(SHEET_CSV_URL)); }
+catch (err) { console.warn('[agenda] Using the saved copy:', err.message); }
+const { upcoming, past } = split(records);
+const json = JSON.stringify(records).replace(/</g, '\\u003c');
+---
+<Base banner title="Agenda" description="Concerten van The Holy 7: wat komt en waar we al speelden.">
+  <section class="page-hero" style="background-image:url(/images/hero-gentse-feesten-2024.jpg);background-position:50% 46%">
+    <h1>Agenda</h1>
+  </section>
+
+  <section class="page">
+    <h2 class="sh flush">Binnenkort</h2>
+    <div id="agUp" set:html={upcomingHtml(upcoming)}></div>
+  </section>
+
+  <section class="page">
+    <h2 class="sh flush">Eerder</h2>
+    <div id="agPast" set:html={pastHtml(past)}></div>
+  </section>
+
+  <script id="agenda-data" type="application/json" set:html={json}></script>
+</Base>
+
+<script>
+  import { fetchSheet } from '../lib/sheet.js';
+  import { SHEET_CSV_URL, recordsFromCSV, split, upcomingHtml, pastHtml } from '../lib/agenda.js';
+  const show = (recs) => {
+    const { upcoming, past } = split(recs);
+    document.getElementById('agUp').innerHTML = upcomingHtml(upcoming);
+    document.getElementById('agPast').innerHTML = pastHtml(past);
+  };
+  if (SHEET_CSV_URL) fetchSheet(SHEET_CSV_URL, { live: true }).then((t) => show(recordsFromCSV(t)))
+    .catch(() => show(JSON.parse(document.getElementById('agenda-data').textContent)));
+</script>

@@ -1,0 +1,88 @@
+---
+import '../styles/site.css';
+import { nav, social } from '../data/site.js';
+
+const { title, description = 'The Holy 7 is een onstuimig balkanorkest uit Gent: klezmer en balkanmuziek met invloeden uit flamenco, folk en Griekse en Midden-Oosterse muziek.', home = false, banner = false } = Astro.props;
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const fullTitle = title ? `${title} | The Holy 7` : 'The Holy 7';
+---
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{fullTitle}</title>
+<meta name="description" content={description}>
+<link rel="icon" href="/favicon.png">
+<link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)}>
+<meta property="og:title" content={fullTitle}>
+<meta property="og:description" content={description}>
+<meta property="og:image" content={new URL('/images/hero-gentse-feesten-2024.jpg', Astro.site)}>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Manrope:wght@300..700&display=swap" rel="stylesheet">
+<slot name="head" />
+</head>
+<body class={home ? 'is-home' : 'is-page'}>
+
+<header class:list={['bar', { solid: !home && !banner, links: !home }]} id="bar">
+  <a class="logo-link" href="/" aria-label="The Holy 7, naar de startpagina"><img src="/images/logo-white.png" alt="The Holy 7" width="638" height="128"></a>
+  <nav class="nav" aria-label="Hoofdmenu">
+    {nav.map((n) => <a class:list={['nav-link', { on: path === n.href }]} href={n.href}>{n.label}</a>)}
+    <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="drawer" aria-label="Menu openen">
+      <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
+    </button>
+  </nav>
+</header>
+
+<nav class="drawer" id="drawer" hidden aria-label="Menu">
+  <a href="/">Start</a>
+  {nav.map((n) => <a href={n.href}>{n.label}</a>)}
+</nav>
+
+<main id="top">
+  <slot />
+</main>
+
+<footer class="foot">
+  <nav class="foot-icons" aria-label="The Holy 7 online">
+    <a href={social.youtube} aria-label="YouTube" target="_blank" rel="noopener"><svg viewBox="0 0 28 20" aria-hidden="true"><rect width="28" height="20" rx="5.5" fill="currentColor"/><path d="M11 5.5v9l8-4.5z" fill="#000"/></svg></a>
+    <a href={social.facebook} aria-label="Facebook" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13.4 22v-8.2h2.8l.4-3.2h-3.2V8.5c0-.9.3-1.6 1.6-1.6h1.7V4.1c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.4H7.2v3.2H10V22z"/></svg></a>
+    <a href={social.instagram} aria-label="Instagram" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.4" cy="6.6" r="1.3" fill="currentColor"/></svg></a>
+    <a href={social.soundcloud} aria-label="SoundCloud" target="_blank" rel="noopener"><svg viewBox="0 0 32 16" aria-hidden="true"><path fill="currentColor" d="M18.5 2.2c-1 0-1.9.2-2.7.6v12.9h11.6a4.1 4.1 0 0 0 0-8.2c-.5 0-1 .1-1.5.3A7.4 7.4 0 0 0 18.5 2.2zM14.3 3.6h1v12.1h-1zm-2 1.6h1v10.5h-1zm-2 .6h1v9.9h-1zm-2 1.4h1v8.5h-1zm-2 .4h1v8.1h-1zm-2 1.6h1v6.5h-1zm-2 1.3h1v5.2h-1zM.3 11.5h1v3h-1z"/></svg></a>
+  </nav>
+  <p>© {new Date().getFullYear()} The Holy 7 · Gent</p>
+</footer>
+
+<script>
+  // Mobile menu
+  const btn = document.getElementById('menuBtn');
+  const drawer = document.getElementById('drawer');
+  btn?.addEventListener('click', () => {
+    const open = drawer.hidden;
+    drawer.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    document.body.classList.toggle('menu-open', open);
+  });
+  drawer?.addEventListener('click', (e) => { if (e.target.closest('a')) { drawer.hidden = true; btn.setAttribute('aria-expanded', 'false'); document.body.classList.remove('menu-open'); } });
+
+  // Over a photo (home, or a page banner) the bar stays clear and turns black once you scroll.
+  // On the home page the links appear once the hero has scrolled away.
+  const bar = document.getElementById('bar');
+  if (document.querySelector('.page-hero')) {
+    const update = () => bar.classList.toggle('solid', window.scrollY > 40);
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  } else if (document.body.classList.contains('is-home')) {
+    const hero = document.getElementById('hero');
+    const update = () => {
+      const past = hero ? window.scrollY > hero.offsetHeight - 120 : true;
+      bar.classList.toggle('solid', window.scrollY > 40);
+      bar.classList.toggle('links', past);
+    };
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  }
+</script>
+</body>
+</html>

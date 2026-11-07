@@ -1,0 +1,163 @@
+---
+import Base from '../layouts/Base.astro';
+import { videos, thumb } from '../data/videos.js';
+import { fetchSheet } from '../lib/sheet.js';
+import * as News from '../lib/news.js';
+import * as Agenda from '../lib/agenda.js';
+import newsSnapshot from '../data/news-snapshot.json';
+import agendaSnapshot from '../data/agenda-snapshot.json';
+
+// News and agenda are written into the page when the site is built (for search
+// engines); the browser then refreshes them from the sheets for every visitor.
+let news = newsSnapshot;
+try { news = News.recordsFromCSV(await fetchSheet(News.SHEET_CSV_URL)); }
+catch (err) { console.warn('[news] Using the saved copy:', err.message); }
+let agenda = agendaSnapshot;
+try { agenda = Agenda.recordsFromCSV(await fetchSheet(Agenda.SHEET_CSV_URL)); }
+catch (err) { console.warn('[agenda] Using the saved copy:', err.message); }
+
+const shownNews = News.current(news);
+const { upcoming } = Agenda.split(agenda);
+const json = (v) => JSON.stringify(v).replace(/</g, '\\u003c');
+
+// Hero backgrounds: photos for now. Each layer can later get a short muted clip
+// (data-video="/video/....mp4"), as on tristannijs.media.
+const layers = [
+  // pos = the point that stays in view (horizontal, vertical): on the faces.
+  { img: '/images/hero-gentse-feesten-2024.jpg', pos: '50% 46%' },
+  { img: '/images/band.jpg', pos: '50% 26%' },
+  { img: '/images/members/mark.jpg', pos: '42% 28%' },
+];
+---
+<Base home>
+  <section class="hero" id="hero">
+    <div class="hero-bg" aria-hidden="true">
+      {layers.map((l, i) => <div class:list={['layer', { on: i === 0 }]} style={`background-image:url(${l.img});background-position:${l.pos}`}></div>)}
+    </div>
+    <div class="hero-shade" aria-hidden="true"></div>
+    <div class="hero-doors">
+      <a class="door" href="/band">De band</a>
+      <a class="door" href="/agenda">Agenda</a>
+      <a class="door" href="/media">Media</a>
+    </div>
+    <a class="hero-down" href="#uitgelicht" aria-label="Naar beneden">
+      <svg viewBox="0 0 40 20" aria-hidden="true"><path d="M1 1l19 17L39 1" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
+    </a>
+  </section>
+
+  <div class="after-hero">
+    <section class="sec" id="uitgelicht">
+      <h2 class="sh">Uitgelicht<sup>{videos.length}</sup></h2>
+      <div class="cf" id="cf">
+        <div class="cf-track" id="cfTrack">
+          {videos.map((v, i) => (
+            <button class="cf-item" type="button" data-id={v.id} data-title={v.title} data-i={i} aria-label={`Speel ${v.title}`}>
+              <img src={thumb(v.id)} alt="" loading="lazy">
+              <span class="play" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M6 4v12l10-6z" fill="currentColor"/></svg></span>
+              <span class="cap"><b>{v.title}</b><span>{v.sub}</span></span>
+            </button>
+          ))}
+        </div>
+        <button class="arrow prev" type="button" data-dir="-1" aria-label="Vorige"><svg viewBox="0 0 20 40" aria-hidden="true"><path d="M19 1L1 20l18 19" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+        <button class="arrow next" type="button" data-dir="1" aria-label="Volgende"><svg viewBox="0 0 20 40" aria-hidden="true"><path d="M1 1l18 19L1 39" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+      </div>
+    </section>
+
+    <div class="cards">
+      <section class="card" id="nieuws" hidden={!shownNews.length}>
+        <h2>Nieuws</h2>
+        <div class="news" id="newsList" set:html={News.newsHtml(shownNews)}></div>
+      </section>
+      <section class="card" id="concerten">
+        <h2>Concerten</h2>
+        <div id="agendaList" set:html={Agenda.upcomingHtml(upcoming.slice(0, 4))}></div>
+        <p class="sec-more"><a href="/agenda">Volledige agenda →</a></p>
+      </section>
+    </div>
+
+    <section class="sec about" id="over">
+      <h2 class="sh">Over</h2>
+      <div class="about-body">
+        <div class="about-text">
+          <p>The Holy 7 is een onstuimig balkanorkest uit Gent. Adrenaline, melancholie en humor wisselen elkaar naadloos af, gedreven door een flinke portie energie.</p>
+          <p>In hun wervelende repertoire krijgen klezmer en balkanmuziek een verfrissende twist door invloeden uit flamenco, folk en traditionele Griekse en Midden-Oosterse muziek. Kortom: meeslepende wereldmuziek met een hoek af!</p>
+          <p class="sec-more"><a href="/band">Maak kennis met de bandleden →</a></p>
+        </div>
+        <div class="about-fig"><img src="/images/band.jpg" alt="The Holy 7 op het podium" width="1600" height="1101" loading="lazy"></div>
+      </div>
+    </section>
+  </div>
+
+  <dialog class="player" id="player" aria-labelledby="plTitle">
+    <div class="pl-screen" id="plScreen"></div>
+    <div class="pl-body">
+      <h3 id="plTitle"></h3>
+      <div class="pl-actions">
+        <a class="btn" id="plLink" href="#" target="_blank" rel="noopener">YouTube ↗</a>
+        <button class="btn" id="plClose" type="button">Sluiten</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script id="news-data" type="application/json" set:html={json(news)}></script>
+  <script id="agenda-data" type="application/json" set:html={json(agenda)}></script>
+</Base>
+
+<script>
+  import { fetchSheet } from '../lib/sheet.js';
+  import * as News from '../lib/news.js';
+  import * as Agenda from '../lib/agenda.js';
+  import { embed, watch } from '../data/videos.js';
+
+  // Hero: crossfade between the background layers.
+  const layers = [...document.querySelectorAll('.hero-bg .layer')];
+  if (layers.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    let n = 0;
+    setInterval(() => {
+      layers[n].classList.remove('on');
+      n = (n + 1) % layers.length;
+      layers[n].classList.add('on');
+    }, 7000);
+  }
+
+  // Carousel: arrows scroll one film at a time; a click opens the player.
+  const track = document.getElementById('cfTrack');
+  // Arrows only when there are more films than fit in one row.
+  const cf = document.getElementById('cf');
+  const checkArrows = () => cf.classList.toggle('scrolls', track.scrollWidth > track.clientWidth + 2);
+  window.addEventListener('resize', checkArrows);
+  checkArrows();
+  document.querySelectorAll('.cf .arrow').forEach((b) => b.addEventListener('click', () => {
+    const item = track.querySelector('.cf-item');
+    track.scrollBy({ left: Number(b.dataset.dir) * (item.offsetWidth + 24), behavior: 'smooth' });
+  }));
+
+  const player = document.getElementById('player');
+  const screen = document.getElementById('plScreen');
+  track.addEventListener('click', (e) => {
+    const item = e.target.closest('.cf-item');
+    if (!item) return;
+    screen.innerHTML = `<iframe src="${embed(item.dataset.id)}" title="${item.dataset.title}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+    document.getElementById('plTitle').textContent = item.dataset.title;
+    document.getElementById('plLink').href = watch(item.dataset.id);
+    player.showModal();
+  });
+  const close = () => { player.close(); };
+  document.getElementById('plClose').addEventListener('click', close);
+  player.addEventListener('click', (e) => { if (e.target === player) close(); });
+  player.addEventListener('close', () => { screen.innerHTML = ''; });
+
+  // News and agenda: refresh from the sheets; if unreachable, keep what the build wrote.
+  const showNews = (recs) => {
+    const shown = News.current(recs);
+    document.getElementById('newsList').innerHTML = News.newsHtml(shown);
+    document.getElementById('nieuws').hidden = !shown.length;
+  };
+  const showAgenda = (recs) => {
+    document.getElementById('agendaList').innerHTML = Agenda.upcomingHtml(Agenda.split(recs).upcoming.slice(0, 4));
+  };
+  if (News.SHEET_CSV_URL) fetchSheet(News.SHEET_CSV_URL, { live: true }).then((t) => showNews(News.recordsFromCSV(t)))
+    .catch(() => showNews(JSON.parse(document.getElementById('news-data').textContent)));
+  if (Agenda.SHEET_CSV_URL) fetchSheet(Agenda.SHEET_CSV_URL, { live: true }).then((t) => showAgenda(Agenda.recordsFromCSV(t)))
+    .catch(() => showAgenda(JSON.parse(document.getElementById('agenda-data').textContent)));
+</script>

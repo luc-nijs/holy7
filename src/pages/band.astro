@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro';
+
+// Texts as on the Wix pages "The band" and "The bandmembers".
+const members = [
+  { name: 'Engelbert Wauters', img: 'engelbert', instr: 'percussie, ukelele & huisraad',
+    profaan: 'muziektherapeut en boswachter.', heilig: 'een beest op percussie en motor van het geheel' },
+  { name: 'Luc Nijs', img: 'luc', instr: 'klarinet',
+    profaan: 'muzikant, leraar en onderzoeker', heilig: 'de chaoot van het gezelschap' },
+  { name: 'Wolf Vanwymeersch', img: 'wolf', instr: 'gitaar',
+    profaan: 'muzikant, producer, ex-gitarist bij The Van Jets, gitarist bij Wholes.', heilig: 'op een Balkan trip met The Holy 7!' },
+  { name: 'Wannes Blondeel', img: 'wannes', instr: 'contrabas',
+    profaan: 'groeit hij op bij Opgroeien', heilig: 'een rustig fundament met een hoek af' },
+  { name: 'Dirk Bryssinck', img: 'dirk', instr: 'viool',
+    profaan: 'psychoanalyticus en oprichter Villa Voortman', heilig: 'een drijvende kracht met een heerlijke zotheid' },
+  { name: 'Mark Duyck', img: 'mark', instr: 'keyboard, piano',
+    profaan: 'ondernemer', heilig: 'het ingetogen anker met pianistieke spielerei' },
+];
+---
+<Base banner title="De band" description="The Holy 7: een onstuimig balkanorkest uit Gent, met Engelbert, Luc, Wolf, Wannes, Dirk en Mark.">
+  <section class="page-hero" style="background-image:url(/images/band.jpg);background-position:50% 22%">
+    <h1>De band</h1>
+  </section>
+
+  <section class="page">
+    <p class="lead">The Holy 7 is een onstuimig balkanorkest uit Gent. Adrenaline, melancholie en humor wisselen elkaar naadloos af, gedreven door een flinke portie energie. In hun wervelende repertoire krijgen klezmer en balkanmuziek een verfrissende twist door invloeden uit flamenco, folk en traditionele Griekse en Midden-Oosterse muziek. Kortom: meeslepende wereldmuziek met een hoek af!</p>
+  </section>
+
+  <section class="page" id="bandleden">
+    <h2 class="sh flush">De bandleden</h2>
+    <div class="members">
+      {members.map((m) => (
+        <article class="member">
+          <img src={`/images/members/${m.img}.jpg`} alt={m.name} loading="lazy">
+          <h3>{m.name}</h3>
+          <p class="instr">{m.instr}</p>
+          <p><span class="tag">in het profane leven</span> {m.profaan}</p>
+          <p><span class="tag">in het heilige leven</span> {m.heilig}</p>
+        </article>
+      ))}
+    </div>
+  </section>
+</Base>

@@ -1,0 +1,84 @@
+---
+import Base from '../layouts/Base.astro';
+import { videos, thumb } from '../data/videos.js';
+import { social } from '../data/site.js';
+
+// Photos for now: the ones that were on Wix. More will come from the LaCie archive.
+const photos = [
+  { src: '/images/hero-gentse-feesten-2024.jpg', alt: 'The Holy 7 op de Gentse Feesten, Luisterplein 2024' },
+  { src: '/images/band.jpg', alt: 'The Holy 7 op het podium' },
+  { src: '/images/foto-1.jpg', alt: 'The Holy 7' },
+  { src: '/images/members/engelbert.jpg', alt: 'Engelbert Wauters' },
+  { src: '/images/members/luc.jpg', alt: 'Luc Nijs' },
+  { src: '/images/members/wolf.jpg', alt: 'Wolf Vanwymeersch' },
+  { src: '/images/members/wannes.jpg', alt: 'Wannes Blondeel' },
+  { src: '/images/members/dirk.jpg', alt: 'Dirk Bryssinck' },
+  { src: '/images/members/mark.jpg', alt: 'Mark Duyck' },
+];
+---
+<Base banner title="Media" description="Film, foto's en muziek van The Holy 7.">
+  <section class="page-hero" style="background-image:url(/images/foto-1.jpg);background-position:50% 20%">
+    <h1>Media</h1>
+  </section>
+
+  <nav class="subnav" aria-label="Media">
+    <a href="#film">Film</a><a href="#foto">Foto</a><a href="#muziek">Muziek</a>
+  </nav>
+
+  <section class="page" id="film">
+    <h2 class="sh flush">Film</h2>
+    <div class="films">
+      {videos.map((v) => (
+        <figure class="film">
+          <button class="film-play" type="button" data-id={v.id} data-title={v.title} aria-label={`Speel ${v.title}`}>
+            <img src={thumb(v.id)} alt="" loading="lazy">
+            <span class="play" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M6 4v12l10-6z" fill="currentColor"/></svg></span>
+          </button>
+          <figcaption><b>{v.title}</b> {v.sub}</figcaption>
+        </figure>
+      ))}
+    </div>
+    <p class="sec-more"><a href={social.youtube} target="_blank" rel="noopener">Meer op ons YouTube-kanaal ↗</a></p>
+  </section>
+
+  <section class="page" id="foto">
+    <h2 class="sh flush">Foto</h2>
+    <div class="photos">
+      {photos.map((p, i) => <button class="ph" type="button" data-i={i}><img src={p.src} alt={p.alt} loading="lazy"></button>)}
+    </div>
+  </section>
+
+  <section class="page" id="muziek">
+    <h2 class="sh flush">Muziek</h2>
+    <a class="sc-banner" href={social.soundcloud} target="_blank" rel="noopener"><img src="/images/soundcloud.jpg" alt="The Holy 7 op SoundCloud" loading="lazy"></a>
+    <p class="sec-more"><a href={social.soundcloud} target="_blank" rel="noopener">Beluister ons op SoundCloud ↗</a></p>
+  </section>
+
+  <dialog class="lightbox" id="lightbox" aria-label="Foto">
+    <img id="lbImg" alt="">
+    <button type="button" class="lb-x" id="lbClose" aria-label="Sluiten">×</button>
+    <button type="button" class="lb-n prev" data-d="-1" aria-label="Vorige"><svg viewBox="0 0 20 40" aria-hidden="true"><path d="M19 1L1 20l18 19" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+    <button type="button" class="lb-n next" data-d="1" aria-label="Volgende"><svg viewBox="0 0 20 40" aria-hidden="true"><path d="M1 1l18 19L1 39" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
+  </dialog>
+</Base>
+
+<script>
+  import { embed } from '../data/videos.js';
+
+  // A film plays in place when clicked.
+  document.querySelectorAll('.film-play').forEach((b) => b.addEventListener('click', () => {
+    b.outerHTML = `<div class="film-frame"><iframe src="${embed(b.dataset.id)}" title="${b.dataset.title}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+  }));
+
+  // Photo lightbox with previous/next and arrow keys.
+  const pics = [...document.querySelectorAll('.ph img')];
+  const lb = document.getElementById('lightbox');
+  const img = document.getElementById('lbImg');
+  let n = 0;
+  const show = (i) => { n = (i + pics.length) % pics.length; img.src = pics[n].src; img.alt = pics[n].alt; };
+  document.querySelectorAll('.ph').forEach((b) => b.addEventListener('click', () => { show(Number(b.dataset.i)); lb.showModal(); }));
+  lb.querySelectorAll('.lb-n').forEach((b) => b.addEventListener('click', () => show(n + Number(b.dataset.d))));
+  document.getElementById('lbClose').addEventListener('click', () => lb.close());
+  lb.addEventListener('click', (e) => { if (e.target === lb) lb.close(); });
+  lb.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') show(n - 1); if (e.key === 'ArrowRight') show(n + 1); });
+</script>

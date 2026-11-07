@@ -1,0 +1,25 @@
+---
+import Base from '../layouts/Base.astro';
+
+// As on the Wix page "Bretagne2025" (address copy-of-bretagne2023).
+const dates = [
+  { when: '10/08/2025, 18h00', where: 'PLOUGASTEL - Le Tapecul', img: 'tapecul' },
+  { when: '12/08/2025, 16h00', where: 'BREST - Ateliers Les Capucins', img: 'brest' },
+  { when: '13/08/2025, 19h00', where: 'DAOULAS - Marché nocturne', img: 'daoulas' },
+  { when: '14/08/2025, 19h00', where: 'LANDERNEAU - La Keltia', img: 'keltia' },
+  { when: '15/08/2025, 19h00', where: 'LA FOREST - Café de la Gare', img: 'gare' },
+];
+---
+<Base title="Bretagne 2025" description="August 2025: concerttournee van The Holy 7 in Bretagne.">
+  <section class="page">
+    <h1 class="page-title">August 2025 - Concert Tour Bretagne (F)</h1>
+    <div class="tour">
+      {dates.map((d) => (
+        <figure>
+          <figcaption><b>{d.when}</b>{d.where}</figcaption>
+          <img src={`/images/bretagne/${d.img}.jpg`} alt={d.where} loading="lazy">
+        </figure>
+      ))}
+    </div>
+  </section>
+</Base>
