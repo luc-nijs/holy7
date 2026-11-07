@@ -1,7 +1,14 @@
 ---
 import Base from '../layouts/Base.astro';
-import { videos, thumb } from '../data/videos.js';
+import { fetchSheet } from '../lib/sheet.js';
+import * as Home from '../lib/home.js';
+import filmsSnapshot from '../data/films-snapshot.json';
 import { social } from '../data/site.js';
+
+// Films: the Films tab of the H7_home sheet, the same list as the home carousel.
+let films = filmsSnapshot;
+try { films = Home.filmsFromCSV(await fetchSheet(Home.FILMS_CSV_URL)); }
+catch (err) { console.warn('[films] Using the saved copy:', err.message); }
 
 // Photos for now: the ones that were on Wix. More will come from the LaCie archive.
 const photos = [
@@ -27,17 +34,7 @@ const photos = [
 
   <section class="page" id="film">
     <h2 class="sh flush">Film</h2>
-    <div class="films">
-      {videos.map((v) => (
-        <figure class="film">
-          <button class="film-play" type="button" data-id={v.id} data-title={v.title} aria-label={`Speel ${v.title}`}>
-            <img src={thumb(v.id)} alt="" loading="lazy">
-            <span class="play" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M6 4v12l10-6z" fill="currentColor"/></svg></span>
-          </button>
-          <figcaption><b>{v.title}</b> {v.sub}</figcaption>
-        </figure>
-      ))}
-    </div>
+    <div class="films" id="films" set:html={Home.filmGridHtml(films)}></div>
     <p class="sec-more"><a href={social.youtube} target="_blank" rel="noopener">Meer op ons YouTube-kanaal ↗</a></p>
   </section>
 
@@ -63,12 +60,20 @@ const photos = [
 </Base>
 
 <script>
-  import { embed } from '../data/videos.js';
+  import { fetchSheet } from '../lib/sheet.js';
+  import * as Home from '../lib/home.js';
 
   // A film plays in place when clicked.
-  document.querySelectorAll('.film-play').forEach((b) => b.addEventListener('click', () => {
-    b.outerHTML = `<div class="film-frame"><iframe src="${embed(b.dataset.id)}" title="${b.dataset.title}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
-  }));
+  const grid = document.getElementById('films');
+  grid.addEventListener('click', (e) => {
+    const b = e.target.closest('.film-play');
+    if (!b) return;
+    b.outerHTML = `<div class="film-frame"><iframe src="${Home.embed(b.dataset.id)}" title="${b.dataset.title}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+  });
+  // Refresh the films from the sheet, unless one is already playing.
+  if (Home.FILMS_CSV_URL) fetchSheet(Home.FILMS_CSV_URL, { live: true }).then((t) => {
+    if (!grid.querySelector('iframe')) grid.innerHTML = Home.filmGridHtml(Home.filmsFromCSV(t));
+  }).catch(() => {});
 
   // Photo lightbox with previous/next and arrow keys.
   const pics = [...document.querySelectorAll('.ph img')];

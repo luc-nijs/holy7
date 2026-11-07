@@ -1,11 +1,13 @@
 ---
 import Base from '../layouts/Base.astro';
-import { videos, thumb } from '../data/videos.js';
+import * as Home from '../lib/home.js';
 import { fetchSheet } from '../lib/sheet.js';
 import * as News from '../lib/news.js';
 import * as Agenda from '../lib/agenda.js';
 import newsSnapshot from '../data/news-snapshot.json';
 import agendaSnapshot from '../data/agenda-snapshot.json';
+import bannerSnapshot from '../data/banner-snapshot.json';
+import filmsSnapshot from '../data/films-snapshot.json';
 
 // News and agenda are written into the page when the site is built (for search
 // engines); the browser then refreshes them from the sheets for every visitor.
@@ -15,25 +17,22 @@ catch (err) { console.warn('[news] Using the saved copy:', err.message); }
 let agenda = agendaSnapshot;
 try { agenda = Agenda.recordsFromCSV(await fetchSheet(Agenda.SHEET_CSV_URL)); }
 catch (err) { console.warn('[agenda] Using the saved copy:', err.message); }
+// Banner photos and films: the two tabs of the H7_home sheet.
+let banner = bannerSnapshot;
+try { banner = Home.bannerFromCSV(await fetchSheet(Home.BANNER_CSV_URL)); }
+catch (err) { console.warn('[banner] Using the saved copy:', err.message); }
+let films = filmsSnapshot;
+try { films = Home.filmsFromCSV(await fetchSheet(Home.FILMS_CSV_URL)); }
+catch (err) { console.warn('[films] Using the saved copy:', err.message); }
 
 const shownNews = News.current(news);
 const { upcoming } = Agenda.split(agenda);
 const json = (v) => JSON.stringify(v).replace(/</g, '\\u003c');
 
-// Hero backgrounds: photos for now. Each layer can later get a short muted clip
-// (data-video="/video/....mp4"), as on tristannijs.media.
-const layers = [
-  // pos = the point that stays in view (horizontal, vertical): on the faces.
-  { img: '/images/hero-gentse-feesten-2024.jpg', pos: '50% 46%' },
-  { img: '/images/band.jpg', pos: '50% 26%' },
-  { img: '/images/members/mark.jpg', pos: '42% 28%' },
-];
 ---
 <Base home>
   <section class="hero" id="hero">
-    <div class="hero-bg" aria-hidden="true">
-      {layers.map((l, i) => <div class:list={['layer', { on: i === 0 }]} style={`background-image:url(${l.img});background-position:${l.pos}`}></div>)}
-    </div>
+    <div class="hero-bg" id="heroBg" aria-hidden="true" set:html={Home.layersHtml(banner)}></div>
     <div class="hero-shade" aria-hidden="true"></div>
     <div class="hero-doors">
       <a class="door" href="/band">De band</a>
@@ -47,17 +46,9 @@ const layers = [
 
   <div class="after-hero">
     <section class="sec" id="uitgelicht">
-      <h2 class="sh">Uitgelicht<sup>{videos.length}</sup></h2>
+      <h2 class="sh">Uitgelicht<sup id="filmCount">{films.length}</sup></h2>
       <div class="cf" id="cf">
-        <div class="cf-track" id="cfTrack">
-          {videos.map((v, i) => (
-            <button class="cf-item" type="button" data-id={v.id} data-title={v.title} data-i={i} aria-label={`Speel ${v.title}`}>
-              <img src={thumb(v.id)} alt="" loading="lazy">
-              <span class="play" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M6 4v12l10-6z" fill="currentColor"/></svg></span>
-              <span class="cap"><b>{v.title}</b><span>{v.sub}</span></span>
-            </button>
-          ))}
-        </div>
+        <div class="cf-track" id="cfTrack" set:html={Home.carouselHtml(films)}></div>
         <button class="arrow prev" type="button" data-dir="-1" aria-label="Vorige"><svg viewBox="0 0 20 40" aria-hidden="true"><path d="M19 1L1 20l18 19" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
         <button class="arrow next" type="button" data-dir="1" aria-label="Volgende"><svg viewBox="0 0 20 40" aria-hidden="true"><path d="M1 1l18 19L1 39" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></button>
       </div>
@@ -101,20 +92,33 @@ const layers = [
 
   <script id="news-data" type="application/json" set:html={json(news)}></script>
   <script id="agenda-data" type="application/json" set:html={json(agenda)}></script>
+  <script id="banner-data" type="application/json" set:html={json(banner)}></script>
+  <script id="films-data" type="application/json" set:html={json(films)}></script>
 </Base>
 
 <script>
   import { fetchSheet } from '../lib/sheet.js';
   import * as News from '../lib/news.js';
   import * as Agenda from '../lib/agenda.js';
-  import { embed, watch } from '../data/videos.js';
+  import * as Home from '../lib/home.js';
+  const { embed, watch } = Home;
 
-  // Hero: crossfade between the background layers.
-  const layers = [...document.querySelectorAll('.hero-bg .layer')];
-  if (layers.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    let n = 0;
+  // Hero: crossfade between the background layers. A Drive photo whose site copy
+  // doesn't exist yet (added since the last build) loads from Drive instead.
+  const heroBg = document.getElementById('heroBg');
+  const fixFallbacks = () => heroBg.querySelectorAll('.layer[data-fallback]').forEach((l) => {
+    const url = /url\(['"]?([^'")]+)/.exec(l.style.backgroundImage)?.[1];
+    const probe = new Image();
+    probe.onerror = () => { l.style.backgroundImage = `url('${l.dataset.fallback}')`; };
+    probe.src = url;
+  });
+  fixFallbacks();
+  let n = 0;
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     setInterval(() => {
-      layers[n].classList.remove('on');
+      const layers = heroBg.querySelectorAll('.layer');
+      if (layers.length < 2) return;
+      layers[n % layers.length].classList.remove('on');
       n = (n + 1) % layers.length;
       layers[n].classList.add('on');
     }, 7000);
@@ -156,6 +160,23 @@ const layers = [
   const showAgenda = (recs) => {
     document.getElementById('agendaList').innerHTML = Agenda.upcomingHtml(Agenda.split(recs).upcoming.slice(0, 4));
   };
+  // Banner and films: redraw only when the sheet differs from what the build wrote.
+  const builtBanner = document.getElementById('banner-data').textContent;
+  if (Home.BANNER_CSV_URL) fetchSheet(Home.BANNER_CSV_URL, { live: true }).then((t) => {
+    const recs = Home.bannerFromCSV(t);
+    if (!recs.length || JSON.stringify(recs) === builtBanner) return;
+    heroBg.innerHTML = Home.layersHtml(recs); n = 0; fixFallbacks();
+  }).catch(() => {});
+  const builtFilms = document.getElementById('films-data').textContent;
+  if (Home.FILMS_CSV_URL) fetchSheet(Home.FILMS_CSV_URL, { live: true }).then((t) => {
+    const recs = Home.filmsFromCSV(t);
+    if (JSON.stringify(recs) === builtFilms) return;
+    track.innerHTML = Home.carouselHtml(recs);
+    document.getElementById('filmCount').textContent = recs.length;
+    document.getElementById('uitgelicht').hidden = !recs.length;
+    checkArrows();
+  }).catch(() => {});
+
   if (News.SHEET_CSV_URL) fetchSheet(News.SHEET_CSV_URL, { live: true }).then((t) => showNews(News.recordsFromCSV(t)))
     .catch(() => showNews(JSON.parse(document.getElementById('news-data').textContent)));
   if (Agenda.SHEET_CSV_URL) fetchSheet(Agenda.SHEET_CSV_URL, { live: true }).then((t) => showAgenda(Agenda.recordsFromCSV(t)))
